@@ -50,34 +50,34 @@ async function findStudentById(studentId) {
     if (studentInfo) {
       // รูปแบบข้อมูลทั้งหมดสำหรับการแสดงผล
       const studentData = `
-        ชื่อ: ${studentInfo.name}
-        เลขประจำตัวนักเรียน: ${studentInfo.studentId}
-        วันเกิด: ${studentInfo.birthdate}
-        เลขประจำตัวประชาชน: ${studentInfo.citizenId}
-        เพศ: ${studentInfo.gender}
-        ที่อยู่: ${studentInfo.address}
+ชื่อ: ${studentInfo.name}
+เลขประจำตัวนักเรียน: ${studentInfo.studentId}
+วันเกิด: ${studentInfo.birthdate}
+เลขประจำตัวประชาชน: ${studentInfo.citizenId}
+เพศ: ${studentInfo.gender}
+ที่อยู่: ${studentInfo.address}
 
-        ข้อมูลครอบครัว:
-        ชื่อผู้ปกครอง: ${studentInfo.family.guardianName}
-        เบอร์โทรผู้ปกครอง: ${studentInfo.family.guardianPhone}
+ข้อมูลครอบครัว:
+ชื่อผู้ปกครอง: ${studentInfo.family.guardianName}
+เบอร์โทรผู้ปกครอง: ${studentInfo.family.guardianPhone}
 
-        ข้อมูลการศึกษา:
-        ระดับชั้น: ${studentInfo.education.class}
-        ห้องเรียน: ${studentInfo.education.section}
-        ผลการเรียน:
-        - เทอม 1 ปี ${studentInfo.education.grades[0].year} - GPA: ${
+ข้อมูลการศึกษา:
+ระดับชั้น: ${studentInfo.education.class}
+ห้องเรียน: ${studentInfo.education.section}
+ผลการเรียน:
+- เทอม 1 ปี ${studentInfo.education.grades[0].year} - GPA: ${
         studentInfo.education.grades[0].GPA
       }
-        - เทอม 2 ปี ${studentInfo.education.grades[1].year} - GPA: ${
+- เทอม 2 ปี ${studentInfo.education.grades[1].year} - GPA: ${
         studentInfo.education.grades[1].GPA
       }
 
-        พฤติกรรม:
-        คะแนนพฤติกรรม: ${studentInfo.behavior.goodnessScore}
-        กิจกรรมพฤติกรรม:
-        ${studentInfo.behavior.activities
-          .map((activity) => `- ${activity.activity}: ${activity.points} คะแนน`)
-          .join("\n")}`;
+พฤติกรรม:
+คะแนนพฤติกรรม: ${studentInfo.behavior.goodnessScore}
+กิจกรรมพฤติกรรม:
+${studentInfo.behavior.activities
+  .map((activity) => `- ${activity.activity}: ${activity.points} คะแนน`)
+  .join("\n")}`;
       return studentData;
     } else {
       return "ไม่พบข้อมูลนักเรียนในฐานข้อมูล";
