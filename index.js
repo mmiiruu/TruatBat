@@ -2,23 +2,23 @@ const line = require("@line/bot-sdk");
 const vision = require("@google-cloud/vision");
 const { MongoClient } = require("mongodb");
 require("dotenv").config();
-// ตั้งค่า LINE bot
+//  LINE bot
 const client = new line.Client({
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.CHANNEL_SECRET,
 });
 
-// ตั้งค่า Google Vision client
+//  Google Vision
 const visionClient = new vision.ImageAnnotatorClient({
   keyFilename: "service-account.json",
 });
 
-// ตั้งค่า MongoDB URI
+//  MongoDB
 const uri =
   "mongodb+srv://mmiiruu:110022work@cluster1.5hq4p.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1";
 const mongoClient = new MongoClient(uri);
 
-// ฟังก์ชัน OCR เพื่อดึง studentId จากรูปภาพ
+// function OCR
 async function detectStudentId(imageBuffer) {
   const [result] = await visionClient.textDetection(imageBuffer);
   const text = result.textAnnotations[0]?.description;
@@ -32,23 +32,53 @@ async function detectStudentId(imageBuffer) {
 
 // ฟังก์ชันกรอง studentId จากข้อความ OCR
 function extractStudentId(text) {
-  const regex = /เลขประจำตัวนักเรียน\s(\d+)/; // ตัวอย่าง regex ที่ใช้ค้นหา studentId
+  const regex = /เลขประจำตัวนักเรียน\s(\d+)/;
   const match = text.match(regex);
   return match ? match[1] : null;
 }
 
-// ฟังก์ชันค้นหาข้อมูลนักเรียนใน MongoDB
+// หารหัสนักเรียนที่ตรงกับฐานข้อมูลMongoDB
 async function findStudentById(studentId) {
   try {
     await mongoClient.connect();
     const database = mongoClient.db("school");
     const collection = database.collection("students");
 
-    // ค้นหานักเรียนตาม studentId
+    // find studentId
     const studentInfo = await collection.findOne({ studentId: studentId });
 
     if (studentInfo) {
-      return `ชื่อ: ${studentInfo.name}\nชั้นเรียน: ${studentInfo.education.class} ${studentInfo.education.section}\nคะแนนพฤติกรรม: ${studentInfo.behavior.goodnessScore}`;
+      // รูปแบบข้อมูลทั้งหมดสำหรับการแสดงผล
+      const studentData = `
+        ชื่อ: ${studentInfo.name}
+        เลขประจำตัวนักเรียน: ${studentInfo.studentId}
+        วันเกิด: ${studentInfo.birthdate}
+        เลขประจำตัวประชาชน: ${studentInfo.citizenId}
+        เพศ: ${studentInfo.gender}
+        ที่อยู่: ${studentInfo.address}
+
+        ข้อมูลครอบครัว:
+        ชื่อผู้ปกครอง: ${studentInfo.family.guardianName}
+        เบอร์โทรผู้ปกครอง: ${studentInfo.family.guardianPhone}
+
+        ข้อมูลการศึกษา:
+        ระดับชั้น: ${studentInfo.education.class}
+        ห้องเรียน: ${studentInfo.education.section}
+        ผลการเรียน:
+        - เทอม 1 ปี ${studentInfo.education.grades[0].year} - GPA: ${
+        studentInfo.education.grades[0].GPA
+      }
+        - เทอม 2 ปี ${studentInfo.education.grades[1].year} - GPA: ${
+        studentInfo.education.grades[1].GPA
+      }
+
+        พฤติกรรม:
+        คะแนนพฤติกรรม: ${studentInfo.behavior.goodnessScore}
+        กิจกรรมพฤติกรรม:
+        ${studentInfo.behavior.activities
+          .map((activity) => `- ${activity.activity}: ${activity.points} คะแนน`)
+          .join("\n")}`;
+      return studentData;
     } else {
       return "ไม่พบข้อมูลนักเรียนในฐานข้อมูล";
     }
@@ -57,7 +87,7 @@ async function findStudentById(studentId) {
   }
 }
 
-// ฟังก์ชันจัดการข้อความและรูปภาพที่ได้รับจาก LINE
+// LINE
 async function handleEvent(event) {
   if (event.type === "message" && event.message.type === "image") {
     try {
@@ -68,7 +98,7 @@ async function handleEvent(event) {
       stream.on("end", async () => {
         const imageBuffer = Buffer.concat(chunks);
 
-        // ตรวจจับ studentId ด้วย Google Vision API
+        // ตรวจจับ ตรวจหารหัสนักเรียน Google Vision API
         const studentId = await detectStudentId(imageBuffer);
 
         if (studentId.startsWith("ไม่พบ")) {
@@ -102,7 +132,7 @@ async function handleEvent(event) {
   }
 }
 
-// สร้างเซิร์ฟเวอร์ Express สำหรับรับ Webhook
+// Express
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 3000;
