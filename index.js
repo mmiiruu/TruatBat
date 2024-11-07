@@ -45,7 +45,7 @@ async function findStudentById(studentId) {
     const collection = database.collection("students");
 
     const studentInfo = await collection.findOne({ studentId: studentId });
-
+    console.log("ข้อมูลนักเรียนที่ดึงมา:", studentInfo);
     if (studentInfo) {
       const studentData = `
 ชื่อ: ${studentInfo.name}
