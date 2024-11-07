@@ -116,10 +116,45 @@ async function saveStudentData(studentId, data) {
 function parseInputToJson(input) {
   const pairs = input.split(",").map((pair) => pair.trim());
   const data = {};
+  const fieldMapping = {
+    ชื่อ: "name",
+    วันเกิด: "birthdate",
+    เลขประจำตัวประชาชน: "citizenId",
+    ที่อยู่: "address",
+    เพศ: "gender",
+    ชื่อผู้ปกครอง: "family.guardianName",
+    เบอร์โทรผู้ปกครอง: "family.guardianPhone",
+    ระดับชั้น: "education.class",
+    ห้องเรียน: "education.section",
+    "ผลการเรียนเทอม 1": "education.grades.0.GPA",
+    "ผลการเรียนเทอม 2": "education.grades.1.GPA",
+    "ปีการศึกษาเทอม 1": "education.grades.0.year",
+    "ปีการศึกษาเทอม 2": "education.grades.1.year",
+    คะแนนพฤติกรรม: "behavior.goodnessScore",
+    กิจกรรมพฤติกรรม: "behavior.activities",
+  };
+
   pairs.forEach((pair) => {
     const [key, value] = pair.split("=").map((item) => item.trim());
     if (key && value) {
-      data[key] = value;
+      const mappedKey = fieldMapping[key] || key; // ใช้ฟิลด์ที่แปลงแล้วหรือฟิลด์เดิมถ้าไม่มีการแมป
+      if (mappedKey.includes(".")) {
+        // แยกฟิลด์ที่เป็นโครงสร้างซ้อน
+        const keys = mappedKey.split(".");
+        let current = data;
+
+        keys.forEach((k, index) => {
+          if (index === keys.length - 1) {
+            current[k] = value;
+          } else {
+            if (!current[k])
+              current[k] = isNaN(parseInt(keys[index + 1])) ? {} : [];
+            current = current[k];
+          }
+        });
+      } else {
+        data[mappedKey] = value;
+      }
     }
   });
   return data;
