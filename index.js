@@ -2,23 +2,23 @@ const line = require("@line/bot-sdk");
 const vision = require("@google-cloud/vision");
 const { MongoClient } = require("mongodb");
 require("dotenv").config();
-//  LINE bot
+
+// LINE bot
 const client = new line.Client({
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.CHANNEL_SECRET,
 });
 
-//  Google Vision
+// Google Vision
 const visionClient = new vision.ImageAnnotatorClient({
   keyFilename: "service-account.json",
 });
 
-//  MongoDB
-const uri =
-  "mongodb+srv://mmiiruu:110022work@cluster1.5hq4p.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1";
+// MongoDB
+const uri = process.env.MONGODB_URI;
 const mongoClient = new MongoClient(uri);
 
-// function OCR
+// Function to detect student ID using OCR
 async function detectStudentId(imageBuffer) {
   const [result] = await visionClient.textDetection(imageBuffer);
   const text = result.textAnnotations[0]?.description;
@@ -30,25 +30,23 @@ async function detectStudentId(imageBuffer) {
   return "ไม่พบข้อความในรูปภาพ";
 }
 
-// ฟังก์ชันกรอง studentId จากข้อความ OCR
+// Function to extract student ID from OCR text
 function extractStudentId(text) {
   const regex = /เลขประจำตัวนักเรียน\s(\d+)/;
   const match = text.match(regex);
   return match ? match[1] : null;
 }
 
-// หารหัสนักเรียนที่ตรงกับฐานข้อมูลMongoDB
+// Function to find student by ID in MongoDB
 async function findStudentById(studentId) {
   try {
     await mongoClient.connect();
     const database = mongoClient.db("school");
     const collection = database.collection("students");
 
-    // find studentId
     const studentInfo = await collection.findOne({ studentId: studentId });
 
     if (studentInfo) {
-      // รูปแบบข้อมูลทั้งหมดสำหรับการแสดงผล
       const studentData = `
 ชื่อ: ${studentInfo.name}
 เลขประจำตัวนักเรียน: ${studentInfo.studentId}
@@ -87,18 +85,50 @@ ${studentInfo.behavior.activities
   }
 }
 
-// LINE
+// Function to save or update student data in MongoDB
+async function saveStudentData(studentId, data) {
+  try {
+    await mongoClient.connect();
+    const database = mongoClient.db("school");
+    const collection = database.collection("students");
+
+    const result = await collection.updateOne(
+      { studentId: studentId },
+      { $set: data },
+      { upsert: true }
+    );
+
+    return result.upsertedCount > 0
+      ? "บันทึกข้อมูลนักเรียนใหม่สำเร็จ"
+      : "อัปเดตข้อมูลนักเรียนสำเร็จ";
+  } finally {
+    await mongoClient.close();
+  }
+}
+
+// Function to parse simple input to JSON
+function parseInputToJson(input) {
+  const pairs = input.split(",").map((pair) => pair.trim());
+  const data = {};
+  pairs.forEach((pair) => {
+    const [key, value] = pair.split("=").map((item) => item.trim());
+    if (key && value) {
+      data[key] = value;
+    }
+  });
+  return data;
+}
+
+// LINE bot handler
 async function handleEvent(event) {
   if (event.type === "message" && event.message.type === "image") {
     try {
-      // ดาวน์โหลดรูปภาพจาก LINE
       const stream = await client.getMessageContent(event.message.id);
       const chunks = [];
       stream.on("data", (chunk) => chunks.push(chunk));
       stream.on("end", async () => {
         const imageBuffer = Buffer.concat(chunks);
 
-        // ตรวจจับ ตรวจหารหัสนักเรียน Google Vision API
         const studentId = await detectStudentId(imageBuffer);
 
         if (studentId.startsWith("ไม่พบ")) {
@@ -107,10 +137,7 @@ async function handleEvent(event) {
             text: studentId,
           });
         } else {
-          // ค้นหาข้อมูลนักเรียนใน MongoDB
           const studentData = await findStudentById(studentId);
-
-          // ตอบกลับข้อมูลนักเรียนไปยัง LINE
           await client.replyMessage(event.replyToken, {
             type: "text",
             text: studentData,
@@ -124,15 +151,49 @@ async function handleEvent(event) {
         text: "เกิดข้อผิดพลาดในการวิเคราะห์รูปภาพ",
       });
     }
-  } else {
-    await client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "กรุณาส่งรูปภาพบัตรนักเรียนที่มีเลขประจำตัว",
-    });
+  } else if (event.type === "message" && event.message.type === "text") {
+    const message = event.message.text.trim();
+    const [command, studentId, ...dataParts] = message.split(" ");
+    if (command === "บันทึกข้อมูล" && studentId && dataParts.length > 0) {
+      try {
+        const dataString = dataParts.join(" ");
+        const data = parseInputToJson(dataString);
+        const response = await saveStudentData(studentId, data);
+        await client.replyMessage(event.replyToken, {
+          type: "text",
+          text: response,
+        });
+      } catch (error) {
+        console.error("Error saving student data:", error);
+        await client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "เกิดข้อผิดพลาดในการบันทึกข้อมูลนักเรียน กรุณาตรวจสอบรูปแบบข้อมูล",
+        });
+      }
+    } else if (/^\d+$/.test(message)) {
+      try {
+        const studentData = await findStudentById(message);
+        await client.replyMessage(event.replyToken, {
+          type: "text",
+          text: studentData,
+        });
+      } catch (error) {
+        console.error("Error finding student:", error);
+        await client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "เกิดข้อผิดพลาดในการค้นหาข้อมูลนักเรียน",
+        });
+      }
+    } else {
+      await client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "กรุณาส่งรูปภาพบัตรนักเรียนที่มีเลขประจำตัว หรือพิมพ์เลขประจำตัวนักเรียนเพื่อค้นหาข้อมูล",
+      });
+    }
   }
 }
 
-// Express
+// Express server
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 3000;
