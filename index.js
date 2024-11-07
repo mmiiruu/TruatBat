@@ -46,36 +46,41 @@ async function findStudentById(studentId) {
 
     const studentInfo = await collection.findOne({ studentId: studentId });
     console.log("ข้อมูลนักเรียนที่ดึงมา:", studentInfo);
+
     if (studentInfo) {
+      // ตรวจสอบฟิลด์ที่อาจไม่มีอยู่เพื่อป้องกันข้อผิดพลาด
       const studentData = `
-ชื่อ: ${studentInfo.name}
-เลขประจำตัวนักเรียน: ${studentInfo.studentId}
-วันเกิด: ${studentInfo.birthdate}
-เลขประจำตัวประชาชน: ${studentInfo.citizenId}
-เพศ: ${studentInfo.gender}
-ที่อยู่: ${studentInfo.address}
+ชื่อ: ${studentInfo.name || "ไม่พบข้อมูล"}
+เลขประจำตัวนักเรียน: ${studentInfo.studentId || "ไม่พบข้อมูล"}
+วันเกิด: ${studentInfo.birthdate || "ไม่พบข้อมูล"}
+เลขประจำตัวประชาชน: ${studentInfo.citizenId || "ไม่พบข้อมูล"}
+เพศ: ${studentInfo.gender || "ไม่พบข้อมูล"}
+ที่อยู่: ${studentInfo.address || "ไม่พบข้อมูล"}
 
 ข้อมูลครอบครัว:
-ชื่อผู้ปกครอง: ${studentInfo.family.guardianName}
-เบอร์โทรผู้ปกครอง: ${studentInfo.family.guardianPhone}
+ชื่อผู้ปกครอง: ${studentInfo.family?.guardianName || "ไม่พบข้อมูล"}
+เบอร์โทรผู้ปกครอง: ${studentInfo.family?.guardianPhone || "ไม่พบข้อมูล"}
 
 ข้อมูลการศึกษา:
-ระดับชั้น: ${studentInfo.education.class}
-ห้องเรียน: ${studentInfo.education.section}
+ระดับชั้น: ${studentInfo.education?.class || "ไม่พบข้อมูล"}
+ห้องเรียน: ${studentInfo.education?.section || "ไม่พบข้อมูล"}
 ผลการเรียน:
-- เทอม 1 ปี ${studentInfo.education.grades[0].year} - GPA: ${
-        studentInfo.education.grades[0].GPA
-      }
-- เทอม 2 ปี ${studentInfo.education.grades[1].year} - GPA: ${
-        studentInfo.education.grades[1].GPA
-      }
+- เทอม 1 ปี ${
+        studentInfo.education?.grades?.[0]?.year || "ไม่พบข้อมูล"
+      } - GPA: ${studentInfo.education?.grades?.[0]?.GPA || "ไม่พบข้อมูล"}
+- เทอม 2 ปี ${
+        studentInfo.education?.grades?.[1]?.year || "ไม่พบข้อมูล"
+      } - GPA: ${studentInfo.education?.grades?.[1]?.GPA || "ไม่พบข้อมูล"}
 
 พฤติกรรม:
-คะแนนพฤติกรรม: ${studentInfo.behavior.goodnessScore}
+คะแนนพฤติกรรม: ${studentInfo.behavior?.goodnessScore || "ไม่พบข้อมูล"}
 กิจกรรมพฤติกรรม:
-${studentInfo.behavior.activities
-  .map((activity) => `- ${activity.activity}: ${activity.points} คะแนน`)
-  .join("\n")}`;
+${
+  studentInfo.behavior?.activities
+    ?.map((activity) => `- ${activity.activity}: ${activity.points} คะแนน`)
+    .join("\n") || "ไม่พบข้อมูล"
+}
+      `;
       return studentData;
     } else {
       return "ไม่พบข้อมูลนักเรียนในฐานข้อมูล";
