@@ -48,7 +48,6 @@ async function findStudentById(studentId) {
     console.log("ข้อมูลนักเรียนที่ดึงมา:", studentInfo);
 
     if (studentInfo) {
-      // ตรวจสอบฟิลด์ที่อาจไม่มีอยู่เพื่อป้องกันข้อผิดพลาด
       const studentData = `
 ชื่อ: ${studentInfo.name || "ไม่พบข้อมูล"}
 เลขประจำตัวนักเรียน: ${studentInfo.studentId || "ไม่พบข้อมูล"}
@@ -76,9 +75,11 @@ async function findStudentById(studentId) {
 คะแนนพฤติกรรม: ${studentInfo.behavior?.goodnessScore || "ไม่พบข้อมูล"}
 กิจกรรมพฤติกรรม:
 ${
-  studentInfo.behavior?.activities
-    ?.map((activity) => `- ${activity.activity}: ${activity.points} คะแนน`)
-    .join("\n") || "ไม่พบข้อมูล"
+  Array.isArray(studentInfo.behavior?.activities)
+    ? studentInfo.behavior.activities
+        .map((activity) => `- ${activity.activity}: ${activity.points} คะแนน`)
+        .join("\n")
+    : "ไม่พบข้อมูลกิจกรรม"
 }
       `;
       return studentData;
