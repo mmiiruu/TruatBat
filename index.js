@@ -97,6 +97,7 @@ async function saveStudentData(studentId, data) {
       { $set: data },
       { upsert: true }
     );
+    console.log("ผลลัพธ์การอัปเดต:", result);
 
     return result.upsertedCount > 0
       ? "บันทึกข้อมูลนักเรียนใหม่สำเร็จ"
