@@ -3,22 +3,17 @@ const vision = require("@google-cloud/vision");
 const { MongoClient } = require("mongodb");
 require("dotenv").config();
 
-// LINE bot
+
 const client = new line.Client({
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.CHANNEL_SECRET,
 });
-
-// Google Vision
 const visionClient = new vision.ImageAnnotatorClient({
   keyFilename: "service-account.json",
 });
 
-// MongoDB
 const uri = process.env.MONGODB_URI;
 const mongoClient = new MongoClient(uri);
-
-// Function to detect student ID using OCR
 async function detectStudentId(imageBuffer) {
   const [result] = await visionClient.textDetection(imageBuffer);
   const text = result.textAnnotations[0]?.description;
@@ -30,14 +25,12 @@ async function detectStudentId(imageBuffer) {
   return "ไม่พบข้อความในรูปภาพ";
 }
 
-// Function to extract student ID from OCR text
 function extractStudentId(text) {
   const regex = /เลขประจำตัวนักเรียน\s(\d+)/;
   const match = text.match(regex);
   return match ? match[1] : null;
 }
 
-// Function to find student by ID in MongoDB
 async function findStudentById(studentId) {
   try {
     await mongoClient.connect();
@@ -90,8 +83,6 @@ ${
     await mongoClient.close();
   }
 }
-
-// Function to save or update student data in MongoDB
 async function saveStudentData(studentId, data) {
   try {
     await mongoClient.connect();
@@ -112,8 +103,6 @@ async function saveStudentData(studentId, data) {
     await mongoClient.close();
   }
 }
-
-// Function to parse simple input to JSON
 function parseInputToJson(input) {
   const pairs = input.split(",").map((pair) => pair.trim());
   const data = {};
@@ -138,9 +127,8 @@ function parseInputToJson(input) {
   pairs.forEach((pair) => {
     const [key, value] = pair.split("=").map((item) => item.trim());
     if (key && value) {
-      const mappedKey = fieldMapping[key] || key; // ใช้ฟิลด์ที่แปลงแล้วหรือฟิลด์เดิมถ้าไม่มีการแมป
+      const mappedKey = fieldMapping[key] || key; 
       if (mappedKey.includes(".")) {
-        // แยกฟิลด์ที่เป็นโครงสร้างซ้อน
         const keys = mappedKey.split(".");
         let current = data;
 
@@ -160,8 +148,6 @@ function parseInputToJson(input) {
   });
   return data;
 }
-
-// LINE bot handler
 async function handleEvent(event) {
   if (event.type === "message" && event.message.type === "image") {
     try {
@@ -234,8 +220,6 @@ async function handleEvent(event) {
     }
   }
 }
-
-// Express server
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 3000;
